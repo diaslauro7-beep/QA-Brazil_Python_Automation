@@ -1,25 +1,17 @@
 import data
-import helpers
 from selenium.webdriver import Chrome
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
 from pages import UrbanRoutesPage
-import time
+
 
 class TestUrbanRoutes:
+
     @classmethod
     def setup_class(cls):
-        from selenium.webdriver import DesiredCapabilities
-        capabilities = DesiredCapabilities.CHROME
-        capabilities["goog:loggingPrefs"] = {'performance': 'ALL'}
-        cls.driver = Chrome()
-        cls.driver.implicitly_wait(5)
-
-        if helpers.is_url_reachable(data.URBAN_ROUTES_URL):
-            print("Conectado ao servidor Urban Routes")
-        else:
-            print("Não foi possível conectar ao Urban Routes. Verifique se o servidor está ligado e ainda em execução")
+        options = Options()
+        options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+        cls.driver = Chrome(options=options)
+        cls.driver.implicitly_wait(10)
 
     def test_set_route(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -34,11 +26,7 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        # Nota: Verifique se route_page_click_confort_active() é um método de route_page
-        assert route_page.route_page_click_confort_active()
-        time.sleep(10)
-        print("Testar seleção de plano")
-        pass
+        assert route_page.is_comfort_active() is True
 
     def test_fill_phone_number(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -46,8 +34,8 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        route_page.click_number_text(data.PHONE_NUMBER)
-        assert data.PHONE_NUMBER in route_page.numero_confirma()
+        route_page.fill_phone_number(data.PHONE_NUMBER)
+        assert data.PHONE_NUMBER in route_page.get_phone_number_text()
 
     def test_fill_card(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -55,9 +43,8 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        route_page.click_add_cartao(data.CARD_NUMBER, data.CARD_CODE)
-        assert "cartao" in route_page.confirm_cartao()
-
+        route_page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
+        assert "Cartão" in route_page.get_card_status_text()
 
     def test_comment_for_driver(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -65,9 +52,9 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        route_page.add_comment(data.MESSAGE_FOR_DRIVER)
-        assert data.MESSAGE_FOR_DRIVER in route_page.confirm_cartao()
-        time.sleep(10)
+        route_page = UrbanRoutesPage(self.driver)
+        route_page.set_comment(data.MESSAGE_FOR_DRIVER)
+        assert route_page.get_comment_value() == data.MESSAGE_FOR_DRIVER
 
     def test_order_blanket_and_handkerchiefs(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -75,8 +62,8 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        route_page.switch_cobertor()
-        assert route_page.switch_cobertor_active() is True
+        route_page.toggle_blanket()
+        assert route_page.is_blanket_active() is True
 
     def test_order_2_ice_creams(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -84,11 +71,8 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        for _ in range(2):
-            route_page.add_ice_creams()
-        assert int(route_page.qnt_sorvete()) == 2
-
-
+        route_page.add_ice_creams(2)
+        assert route_page.get_ice_cream_count() == "2"
 
     def test_car_search_model_appears(self):
         self.driver.get(data.URBAN_ROUTES_URL)
@@ -96,12 +80,10 @@ class TestUrbanRoutes:
         route_page.enter_location(data.ADDRESS_FROM, data.ADDRESS_TO)
         route_page.click_taxi_option()
         route_page.click_confort_icon()
-        route_page.click_number_text(data.PHONE_NUMBER)
-        route_page.click_add_cartao(data.CARD_NUMBER, data.CARD_CODE)
-        route_page.add_comment(data.MESSAGE_FOR_DRIVER)
+        route_page.fill_phone_number(data.PHONE_NUMBER)
+        route_page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
         route_page.call_taxi()
-        assert "buscar carro" in route_page.pop_up_show()
-
+        assert "Buscar carro" in route_page.get_order_title()
 
     @classmethod
     def teardown_class(cls):
